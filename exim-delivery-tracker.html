@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบติดตามรับคืนสินค้า CN</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #f4f7fa;
+    --surface: #ffffff;
+    --surface2: #eef2f7;
+    --border: #dde5ee;
+    --teal: #0891b2;
+    --teal-dark: #0e7490;
+    --teal-tint: #e0f7fa;
+    --amber: #d97706;
+    --amber-tint: #fef3e2;
+    --green: #16a34a;
+    --green-tint: #e8f8ee;
+    --red: #dc2626;
+    --red-tint: #fdecec;
+    --slate: #64748b;
+    --text: #1e293b;
+    --text-muted: #6b7d92;
+    --radius: 10px;
+    --shadow: 0 2px 10px rgba(30,60,90,0.06);
+    --shadow-md: 0 6px 24px rgba(30,60,90,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(120deg, #ffffff 0%, var(--teal-tint) 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+  .header-icon {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(8,145,178,0.25);
+  }
+  .header-title { font-size: 17px; font-weight: 700; color: var(--text); }
+  .header-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .header-badge {
+    margin-left: auto;
+    background: var(--teal-tint);
+    border: 1px solid rgba(8,145,178,0.25);
+    color: var(--teal-dark);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* Status filter buttons */
+  .status-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .status-btn {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    padding: 9px 16px;
+    border-radius: 24px;
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .status-btn:hover { border-color: var(--slate); transform: translateY(-1px); box-shadow: var(--shadow); }
+  .status-btn .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .status-btn .count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    padding: 1px 7px;
+    border-radius: 10px;
+    color: var(--text-muted);
+  }
+  .status-btn.accept:hover { border-color: var(--green); background: var(--green-tint); }
+  .status-btn.reject:hover { border-color: var(--red); background: var(--red-tint); }
+  .status-btn.hold:hover { border-color: var(--amber); background: var(--amber-tint); }
+  .dot-accept { background: var(--green); }
+  .dot-reject { background: var(--red); }
+  .dot-hold { background: var(--amber); }
+  .dot-pending { background: var(--slate); opacity: 0.5; }
+
+  /* Search section */
+  .search-section {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 24px;
+  }
+  .search-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    max-width: 700px;
+  }
+  .date-search-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 12px;
+  }
+  .date-search-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .date-search-input {
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 9px 12px;
+    border-radius: var(--radius);
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .date-search-input:focus { border-color: var(--teal); background: var(--surface); box-shadow: 0 0 0 3px rgba(8,145,178,0.12); }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+  }
+  .search-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--text-muted); font-size: 16px; pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 11px 14px 11px 42px;
+    border-radius: var(--radius);
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .search-input::placeholder { color: var(--text-muted); }
+  .search-input:focus { border-color: var(--teal); background: var(--surface); box-shadow: 0 0 0 3px rgba(8,145,178,0.12); }
+  .btn-search {
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    color: #fff;
+    border: none;
+    padding: 11px 22px;
+    border-radius: var(--radius);
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s, transform 0.1s;
+    box-shadow: 0 3px 10px rgba(8,145,178,0.25);
+  }
+  .btn-search:hover { opacity: 0.92; }
+  .btn-search:active { transform: scale(0.97); }
+  .btn-clear {
+    background: var(--surface);
+    color: var(--text-muted);
+    border: 1.5px solid var(--border);
+    padding: 11px 16px;
+    border-radius: var(--radius);
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-clear:hover { border-color: var(--slate); color: var(--text); }
+
+  /* Suggestion dropdown */
+  .suggestions {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    z-index: 200;
+    max-height: 280px;
+    overflow-y: auto;
+    display: none;
+  }
+  .suggestions.show { display: block; }
+  .sug-item {
+    padding: 11px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--surface2);
+    transition: background 0.1s;
+  }
+  .sug-item:last-child { border-bottom: none; }
+  .sug-item:hover { background: var(--teal-tint); }
+  .sug-code { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: var(--teal-dark); background: var(--teal-tint); padding: 2px 8px; border-radius: 6px; }
+  .sug-name { font-size: 13px; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sug-num { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+
+  /* Main content */
+  .main { padding: 20px 24px 40px; }
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.6; }
+  .empty-text { font-size: 15px; font-weight: 500; }
+  .empty-hint { font-size: 13px; margin-top: 6px; opacity: 0.8; }
+
+  /* Vendor summary header */
+  .vendor-summary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .vendor-summary-icon {
+    width: 48px; height: 48px;
+    background: var(--teal-tint);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .vendor-summary-info { flex: 1; min-width: 200px; }
+  .vendor-summary-code { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
+  .vendor-summary-name { font-size: 17px; font-weight: 700; color: var(--text); }
+  .vendor-summary-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+  .mini-stat {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .mini-stat.total { background: var(--teal-tint); color: var(--teal-dark); }
+  .mini-stat.accept { background: var(--green-tint); color: var(--green); }
+  .mini-stat.reject { background: var(--red-tint); color: var(--red); }
+  .mini-stat.hold { background: var(--amber-tint); color: var(--amber); }
+  .mini-stat.pending { background: var(--surface2); color: var(--text-muted); }
+
+  /* Result card */
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.2s;
+  }
+  .result-card:hover { box-shadow: var(--shadow-md); }
+  .card-header {
+    background: var(--surface2);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .card-header[onclick]:hover { background: var(--teal-tint); }
+  .card-click-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .card-header[onclick]:hover .card-click-hint { opacity: 1; }
+  .exim-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--teal-dark);
+    letter-spacing: 0.3px;
+  }
+  .overall-badge { margin-left: auto; }
+
+  /* Round grid */
+  .rounds-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+  }
+  .round-col {
+    padding: 16px 18px;
+    border-right: 1px solid var(--border);
+    position: relative;
+  }
+  .round-col:last-child { border-right: none; }
+  .round-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .round-number {
+    width: 18px; height: 18px;
+    background: var(--teal-tint);
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    color: var(--teal-dark);
+    font-weight: 700;
+  }
+  .round-warning { font-size: 9px; color: var(--amber); opacity: 0.85; }
+
+  .field { margin-bottom: 10px; }
+  .field-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .field-date { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--amber); font-weight: 600; }
+  .field-empty { color: #c2cdd9; font-size: 12px; }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .status-accept { background: var(--green-tint); border: 1px solid rgba(22,163,74,0.25); color: var(--green); }
+  .status-reject { background: var(--red-tint); border: 1px solid rgba(220,38,38,0.25); color: var(--red); }
+  .status-hold { background: var(--amber-tint); border: 1px solid rgba(217,119,6,0.25); color: var(--amber); }
+  .status-empty { color: var(--text-muted); font-size: 12px; }
+
+  .note-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--bg);
+    border-left: 3px solid var(--teal);
+    padding: 5px 9px;
+    border-radius: 0 6px 6px 0;
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+
+  /* Edit section */
+  .edit-section {
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 16px 20px;
+  }
+  .edit-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--teal-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .edit-body { display: none; }
+  .edit-body.open { display: block; }
+  .edit-grid-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 1fr;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 8px;
+  }
+  .round-tag { font-size: 11px; font-weight: 700; color: var(--text-muted); padding-bottom: 9px; text-align: center; }
+  .form-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; display: block; }
+  .form-input, .form-select {
+    width: 100%;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--teal); }
+  .form-note-row { margin-bottom: 10px; }
+  .btn-save {
+    background: linear-gradient(135deg, var(--green), #0e8a3f);
+    color: #fff;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 6px;
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+    display: flex; align-items: center; gap: 6px;
+    box-shadow: 0 3px 10px rgba(22,163,74,0.25);
+  }
+  .btn-save:hover { opacity: 0.9; }
+  .chevron { margin-left: auto; transition: transform 0.2s; font-size: 11px; }
+  .chevron.open { transform: rotate(180deg); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--green);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 999;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.25s;
+    pointer-events: none;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 8px 24px rgba(22,163,74,0.35);
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Modal for status summary */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(20,35,50,0.45);
+    backdrop-filter: blur(2px);
+    z-index: 500;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--surface);
+    border-radius: 16px;
+    max-width: 720px;
+    width: 100%;
+    max-height: 85vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  }
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; flex: 1; }
+  .modal-close {
+    background: var(--surface2);
+    border: none;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-close:hover { background: var(--border); color: var(--text); }
+  .modal-body { padding: 16px 24px; overflow-y: auto; flex: 1; }
+  .modal-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    background: var(--bg);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .modal-row:hover { background: var(--teal-tint); }
+  .modal-row-exim { font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: var(--teal-dark); font-size: 13px; min-width: 120px; }
+  .modal-row-vendor { font-size: 13px; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .modal-row-date { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .modal-row-round { font-size: 11px; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+  .modal-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+
+  /* Date search results - vendor simple list */
+  .vendor-simple-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: all 0.15s;
+  }
+  .vendor-simple-row:hover { box-shadow: var(--shadow-md); border-color: var(--teal); transform: translateY(-1px); }
+  .vendor-simple-icon {
+    width: 40px; height: 40px;
+    background: var(--teal-tint);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .vendor-simple-info { flex: 1; min-width: 0; }
+  .vendor-simple-code { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-muted); }
+  .vendor-simple-name { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vendor-simple-arrow { color: var(--teal); font-size: 18px; flex-shrink: 0; }
+  .vendor-simple-exim { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--teal-dark); background: var(--teal-tint); padding: 3px 9px; border-radius: 8px; white-space: nowrap; }
+
+  /* Edit popup modal (larger) */
+  .edit-modal-box {
+    background: var(--surface);
+    border-radius: 16px;
+    max-width: 760px;
+    width: 100%;
+    max-height: 88vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  }
+  .edit-modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface2);
+  }
+  .edit-modal-icon {
+    width: 44px; height: 44px;
+    background: var(--teal-tint);
+    border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .edit-modal-titles { flex: 1; min-width: 0; }
+  .edit-modal-vcode { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text-muted); }
+  .edit-modal-vname { font-size: 16px; font-weight: 700; color: var(--text); }
+  .edit-modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+
+  /* Stat bar */
+  .stat-bar {
+    display: flex;
+    gap: 16px;
+    padding: 10px 24px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .stat-item { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
+  .stat-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .stat-count { font-weight: 700; }
+
+  @media (max-width: 700px) {
+    .rounds-grid { grid-template-columns: 1fr; }
+    .round-col { border-right: none; border-bottom: 1px solid var(--border); }
+    .status-bar { padding: 12px 16px; }
+    .vendor-summary { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🚚</div>
+  <div>
+    <div class="header-title">ระบบติดตามรับคืนสินค้า CN</div>
+    <div class="header-sub">Credit Note Return Tracking System</div>
+  </div>
+  <div class="header-badge" id="totalBadge">0 รายการ</div>
+</div>
+
+<div class="status-bar" id="statusButtonsBar"></div>
+
+<div class="search-section">
+  <div class="search-row">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="searchInput" placeholder="ค้นหาด้วยชื่อ Vendor หรือ Vendor Code..." autocomplete="off">
+      <div class="suggestions" id="suggestions"></div>
+    </div>
+    <button class="btn-search" onclick="doSearch()">ค้นหา</button>
+    <button class="btn-clear" onclick="clearSearch()">ล้าง</button>
+  </div>
+  <div class="date-search-row">
+    <span class="date-search-label">📅 ค้นหาวันที่เข้าส่ง</span>
+    <input type="date" class="date-search-input" id="dateSearchInput" onchange="doDateSearch()">
+    <button class="btn-clear" id="dateClearBtn" onclick="clearDateSearch()" style="display:none">ล้าง</button>
+  </div>
+</div>
+
+<div class="stat-bar" id="statBar" style="display:none"></div>
+
+<div class="main" id="mainContent">
+  <div class="empty-state">
+    <div class="empty-icon">📦</div>
+    <div class="empty-text">กรอกชื่อ Vendor หรือ Vendor Code เพื่อค้นหา</div>
+    <div class="empty-hint">ระบบจะแสดงรายการ EX ทั้งหมดของ Vendor นั้น</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">รายการ</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editModalOverlay">
+  <div class="edit-modal-box">
+    <div class="edit-modal-header">
+      <div class="edit-modal-icon">🏢</div>
+      <div class="edit-modal-titles">
+        <div class="edit-modal-vcode" id="editModalCode"></div>
+        <div class="edit-modal-vname" id="editModalName"></div>
+      </div>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <div class="edit-modal-body" id="editModalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✅ บันทึกข้อมูลเรียบร้อยแล้ว</div>
+
+<script>
+let DB = [];
+
+// ===================================================================
+// Google Apps Script Web App URL — แก้ไขตรงนี้หลัง Deploy เสร็จ
+// ===================================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbztFxhBLBe8fZNukdufxGVleVcB4mWjFDDoi4D8iI6jaW4irCgXGWQHd4BB6vK8QcE/exec';
+
+const POLL_INTERVAL_MS = 15000; // ดึงข้อมูลใหม่ทุก 15 วินาที เพื่อเห็นการแก้ไขของคนอื่น
+let isSaving = false;
+let lastDataTimestamp = 0;
+
+function getRecord(exim) {
+  return DB.find(r => r.exim === exim) || {};
+}
+
+function getMerged(r) {
+  // DB คือข้อมูลจริงจาก Sheet เสมอ ไม่มี local override อีกต่อไป
+  return r;
+}
+
+const statusOptions = ['', 'รับกลับ', 'ไม่รับ', 'ไม่รับยึดบิล', 'รับคืน'];
+
+function isAccept(s) { return s === 'รับกลับ' || s === 'รับคืน'; }
+function isHold(s) { return s && s.indexOf('ยึดบิล') !== -1; }
+function isReject(s) { return s === 'ไม่รับ' && !isHold(s); }
+
+function overallStatus(r) {
+  // latest non-empty status among round 3,2,1
+  const s = r.s3 || r.s2 || r.s1;
+  return s || '';
+}
+
+function statusClass(s) {
+  if (!s) return 'status-empty';
+  if (isAccept(s)) return 'status-badge status-accept';
+  if (isHold(s)) return 'status-badge status-hold';
+  if (isReject(s)) return 'status-badge status-reject';
+  return 'status-badge';
+}
+
+function statusIcon(s) {
+  if (!s) return '';
+  if (isAccept(s)) return '✅';
+  if (isHold(s)) return '⚠️';
+  if (isReject(s)) return '❌';
+  return '•';
+}
+
+// แปลง string วันที่จาก backend ให้เป็นรูปแบบ yyyy-mm-dd เสมอ
+// รองรับทั้งกรณีปกติ (2026-06-22) และกรณีหลุดมาเป็น JS Date string
+// (เช่น "Mon Jun 22 2026 07:00:00 GMT+0700 (Indochina Time)") ที่อาจเกิดจาก
+// การที่ Google Sheets แปลง cell เป็น Date object เอง
+function normalizeDate(d) {
+  if (!d) return '';
+  const s = String(d).trim();
+  // กรณีปกติ: yyyy-mm-dd หรือ yyyy-mm-ddTHH:mm:ss...
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+
+  // กรณี dd/mm/yyyy หรือ mm/dd/yyyy ที่หลุดมาจาก input บางประเภท
+  const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    // input type="date" ของ HTML ส่งมาเป็น yyyy-mm-dd อยู่แล้วเสมอ
+    // ดังนั้นถ้าเจอ slash format มักมาจากแหล่งอื่น ให้ลอง parse แบบ Date ปกติ
+    const dt = new Date(s);
+    if (!isNaN(dt.getTime())) return toIsoDate(dt);
+  }
+
+  // กรณีหลุดมาเป็น JS Date toString() เช่น "Mon Jun 22 2026 07:00:00 GMT+0700..."
+  // หรือรูปแบบวันที่อื่นที่ Date() parse ได้
+  const dt = new Date(s);
+  if (!isNaN(dt.getTime())) return toIsoDate(dt);
+
+  return s; // parse ไม่ได้จริงๆ ให้คืนค่าดิบไป
+}
+
+function toIsoDate(dt) {
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const d = String(dt.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  try {
+    const iso = normalizeDate(d);
+    const parts = iso.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0]);
+      if (y < 1990 || y > 2100) return '—';
+      const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      return `${parseInt(parts[2])} ${months[parseInt(parts[1])-1]} ${y}`;
+    }
+  } catch(e){}
+  return d;
+}
+
+function renderRound(r, n) {
+  const d = r['d'+n], s = r['s'+n], note = r['n'+n];
+  const hasData = d || s || note;
+  return `
+    <div class="round-col">
+      <div class="round-label">
+        <span class="round-number">${n}</span>
+        แจ้งซัพครั้งที่ ${n}
+        ${n > 1 ? '<span class="round-warning">(หากไม่รับให้ยึดบิล)</span>' : ''}
+      </div>
+      ${hasData ? `
+        <div class="field">
+          <div class="field-label">📅 วันที่เข้าส่ง</div>
+          <div class="field-date">${fmtDate(d) || '<span class="field-empty">—</span>'}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">📋 สถานะ</div>
+          ${s ? `<span class="${statusClass(s)}">${statusIcon(s)} ${s}</span>` : '<span class="status-empty">—</span>'}
+        </div>
+        ${note ? `<div class="note-text">💬 ${note}</div>` : ''}
+      ` : `<div class="field-empty" style="font-size:13px;padding-top:4px">ยังไม่มีข้อมูล</div>`}
+    </div>`;
+}
+
+function renderEditRow(exim, n, label) {
+  const r = getRecord(exim);
+  const d = normalizeDate(r['d'+n]) || '', s = r['s'+n] || '', note = r['n'+n] || '';
+  const opts = statusOptions.map(o => `<option value="${o}" ${o===s?'selected':''}>${o||'— เลือกสถานะ —'}</option>`).join('');
+  return `
+    <div class="edit-grid-row">
+      <div class="round-tag">ครั้งที่ ${n}</div>
+      <div class="form-group">
+        <label class="form-label">📅 วันที่เข้าส่ง</label>
+        <input type="date" class="form-input" id="d${n}_${exim}" value="${d}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📋 สถานะ</label>
+        <select class="form-select" id="s${n}_${exim}">${opts}</select>
+      </div>
+    </div>
+    <div class="form-note-row">
+      <label class="form-label">💬 หมายเหตุ (ครั้งที่ ${n})</label>
+      <input type="text" class="form-input" id="n${n}_${exim}" value="${note}" placeholder="หมายเหตุ (ถ้ามี)">
+    </div>`;
+}
+
+async function saveRecord(exim) {
+  if (isSaving) return; // ป้องกันกดบันทึกซ้ำซ้อน
+  const r = { d1:'', s1:'', n1:'', d2:'', s2:'', n2:'', d3:'', s3:'', n3:'' };
+  for (let n = 1; n <= 3; n++) {
+    const dEl = document.getElementById(`d${n}_${exim}`);
+    const sEl = document.getElementById(`s${n}_${exim}`);
+    const nEl = document.getElementById(`n${n}_${exim}`);
+    if (dEl) r['d'+n] = dEl.value;
+    if (sEl) r['s'+n] = sEl.value;
+    if (nEl) r['n'+n] = nEl.value;
+  }
+
+  const saveBtn = document.querySelector(`button[onclick="saveRecord('${exim}')"]`);
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ กำลังบันทึก...'; }
+  isSaving = true;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'update', exim: exim, data: r })
+    });
+    const json = await res.json();
+
+    if (!json.success) throw new Error(json.error || 'บันทึกไม่สำเร็จ');
+
+    // อัปเดต DB จากข้อมูลล่าสุดที่ server ส่งกลับมาทันที (รวมการแก้ไขของคนอื่นด้วย)
+    DB = json.data;
+    lastDataTimestamp = json.timestamp || Date.now();
+
+    showToast('บันทึกข้อมูล ' + exim + ' เรียบร้อยแล้ว');
+
+    // ปิด popup ทันทีหลังบันทึกสำเร็จ ตามที่ต้องการสำหรับการใช้งานพร้อมกันหลาย user
+    closeEditModal();
+
+    // รีเฟรชหน้าจอหลักให้ตรงกับข้อมูลล่าสุด
+    refreshCurrentView();
+    renderStatusButtons();
+
+  } catch (err) {
+    showToast('❌ บันทึกไม่สำเร็จ: ' + err.message, true);
+  } finally {
+    isSaving = false;
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '💾 บันทึก'; }
+  }
+}
+
+function refreshCurrentView() {
+  // รีเฟรชมุมมองปัจจุบันให้ตรงกับ DB ล่าสุด โดยไม่ต้องเปิด popup ใหม่
+  const dateVal = document.getElementById('dateSearchInput').value;
+  if (dateVal) {
+    doDateSearch();
+  } else if (lastVendorKey) {
+    renderVendorResults(lastVendorKey);
+  }
+}
+
+function toggleEdit(exim) {
+  const body = document.getElementById('edit_' + exim);
+  const chev = document.getElementById('chev_' + exim);
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+
+function renderCard(r, opts) {
+  opts = opts || {};
+  const inModal = !!opts.inModal;
+  const merged = getMerged(r);
+  const overall = overallStatus(merged);
+  const headerClick = inModal ? '' : `onclick="openEximModal('${r.exim}')"`;
+  const headerCursor = inModal ? '' : 'style="cursor:pointer"';
+  return `
+    <div class="result-card">
+      <div class="card-header" ${headerClick} ${headerCursor}>
+        <div class="exim-num">${r.exim}</div>
+        ${!inModal ? '<span class="card-click-hint">คลิกเพื่อดูรายละเอียด / แก้ไข →</span>' : ''}
+        <div class="overall-badge">
+          ${overall ? `<span class="${statusClass(overall)}">${statusIcon(overall)} ${overall}</span>` : '<span class="status-empty">รอดำเนินการ</span>'}
+        </div>
+      </div>
+      <div class="rounds-grid">
+        ${renderRound(merged, 1)}
+        ${renderRound(merged, 2)}
+        ${renderRound(merged, 3)}
+      </div>
+      ${inModal ? `
+      <div class="edit-section">
+        <div class="edit-title" onclick="toggleEdit('${r.exim}')">
+          ✏️ บันทึก / แก้ไขข้อมูล
+          <span class="chevron open" id="chev_${r.exim}">▾</span>
+        </div>
+        <div class="edit-body open" id="edit_${r.exim}">
+          ${renderEditRow(r.exim, 1)}
+          ${renderEditRow(r.exim, 2)}
+          ${renderEditRow(r.exim, 3)}
+          <button class="btn-save" onclick="saveRecord('${r.exim}')">💾 บันทึก</button>
+        </div>
+      </div>` : ''}
+    </div>`;
+}
+
+let lastVendorKey = null;
+let currentModalMode = null;
+
+function getVendorList() {
+  // unique vendors
+  const map = new Map();
+  DB.forEach(r => {
+    const key = r.vendor + '|' + r.name;
+    if (!map.has(key)) map.set(key, { vendor: r.vendor, name: r.name, count: 0 });
+    map.get(key).count++;
+  });
+  return Array.from(map.values());
+}
+
+function renderVendorResults(vendorKey) {
+  lastVendorKey = vendorKey;
+  const [vendor, name] = vendorKey.split('|');
+  const results = DB.filter(r => r.vendor === vendor && r.name === name);
+  const content = document.getElementById('mainContent');
+  const statBar = document.getElementById('statBar');
+
+  if (!results.length) {
+    content.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-text">ไม่พบข้อมูลที่ค้นหา</div>
+    </div>`;
+    statBar.style.display = 'none';
+    return;
+  }
+
+  let accept = 0, reject = 0, hold = 0, empty = 0;
+  results.forEach(r => {
+    const merged = getMerged(r);
+    const s = overallStatus(merged);
+    if (!s) empty++;
+    else if (isAccept(s)) accept++;
+    else if (isHold(s)) hold++;
+    else reject++;
+  });
+
+  statBar.style.display = 'flex';
+  statBar.innerHTML = `
+    <div class="stat-item"><div class="stat-dot" style="background:var(--teal)"></div>พบ <span class="stat-count">${results.length}</span> รายการ EX</div>
+    <div class="stat-item"><div class="stat-dot" style="background:var(--green)"></div>รับกลับ/รับคืน <span class="stat-count" style="color:var(--green)">${accept}</span></div>
+    <div class="stat-item"><div class="stat-dot" style="background:var(--red)"></div>ไม่รับ <span class="stat-count" style="color:var(--red)">${reject}</span></div>
+    <div class="stat-item"><div class="stat-dot" style="background:var(--amber)"></div>ไม่รับยึดบิล <span class="stat-count" style="color:var(--amber)">${hold}</span></div>
+    <div class="stat-item"><div class="stat-dot" style="background:var(--slate);opacity:.5"></div>รอดำเนินการ <span class="stat-count">${empty}</span></div>
+  `;
+
+  content.innerHTML = `
+    <div class="vendor-summary">
+      <div class="vendor-summary-icon">🏢</div>
+      <div class="vendor-summary-info">
+        <div class="vendor-summary-code">Vendor Code: ${vendor}</div>
+        <div class="vendor-summary-name">${name}</div>
+      </div>
+      <div class="vendor-summary-stats">
+        <span class="mini-stat total">📦 ทั้งหมด ${results.length} EX</span>
+        <span class="mini-stat accept">✅ รับกลับ/รับคืน ${accept}</span>
+        <span class="mini-stat reject">❌ ไม่รับ ${reject}</span>
+        <span class="mini-stat hold">⚠️ ยึดบิล ${hold}</span>
+        ${empty ? `<span class="mini-stat pending">• รอดำเนินการ ${empty}</span>` : ''}
+      </div>
+    </div>
+  ` + results.map(r => renderCard(r)).join('');
+}
+
+function doSearch() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  document.getElementById('suggestions').classList.remove('show');
+  if (!q) { clearSearch(); return; }
+
+  const vendors = getVendorList().filter(v =>
+    v.vendor.toLowerCase().includes(q) || v.name.toLowerCase().includes(q)
+  );
+
+  if (vendors.length === 1) {
+    renderVendorResults(vendors[0].vendor + '|' + vendors[0].name);
+  } else if (vendors.length > 1) {
+    // show list to pick
+    const content = document.getElementById('mainContent');
+    document.getElementById('statBar').style.display = 'none';
+    content.innerHTML = `
+      <div style="margin-bottom:14px;color:var(--text-muted);font-size:13px;">พบ ${vendors.length} Vendor ที่ตรงกับ "${q}" — เลือก Vendor ที่ต้องการ</div>
+      ${vendors.map(v => `
+        <div class="result-card" style="cursor:pointer" onclick="renderVendorResults('${v.vendor}|${v.name.replace(/'/g,"\\'")}')">
+          <div class="card-header" style="border-bottom:none">
+            <div class="vendor-summary-icon" style="width:38px;height:38px;font-size:18px">🏢</div>
+            <div style="flex:1">
+              <div class="vendor-summary-code">${v.vendor}</div>
+              <div style="font-weight:700;font-size:14px">${v.name}</div>
+            </div>
+            <div class="status-btn" style="cursor:pointer">${v.count} รายการ EX →</div>
+          </div>
+        </div>
+      `).join('')}
+    `;
+  } else {
+    document.getElementById('mainContent').innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-text">ไม่พบ Vendor ที่ค้นหา</div>
+      <div class="empty-hint">ลองค้นหาด้วยชื่อหรือโค้ดอื่น</div>
+    </div>`;
+    document.getElementById('statBar').style.display = 'none';
+  }
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('suggestions').classList.remove('show');
+  document.getElementById('mainContent').innerHTML = `<div class="empty-state">
+    <div class="empty-icon">📦</div>
+    <div class="empty-text">กรอกชื่อ Vendor หรือ Vendor Code เพื่อค้นหา</div>
+    <div class="empty-hint">ระบบจะแสดงรายการ EX ทั้งหมดของ Vendor นั้น</div>
+  </div>`;
+  document.getElementById('statBar').style.display = 'none';
+  lastVendorKey = null;
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = isError ? msg : ('✅ ' + msg);
+  t.style.background = isError ? 'var(--red)' : 'var(--green)';
+  t.style.boxShadow = isError ? '0 8px 24px rgba(220,38,38,0.35)' : '0 8px 24px rgba(22,163,74,0.35)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), isError ? 4500 : 2800);
+}
+
+// Autocomplete (vendor only)
+const searchInput = document.getElementById('searchInput');
+const sugEl = document.getElementById('suggestions');
+
+searchInput.addEventListener('input', function() {
+  const q = this.value.trim().toLowerCase();
+  if (q.length < 1) { sugEl.classList.remove('show'); return; }
+  const vendors = getVendorList().filter(v =>
+    v.vendor.toLowerCase().includes(q) || v.name.toLowerCase().includes(q)
+  ).slice(0, 8);
+  if (!vendors.length) { sugEl.classList.remove('show'); return; }
+  sugEl.innerHTML = vendors.map(v => `
+    <div class="sug-item" onclick="selectSug('${v.vendor}|${v.name.replace(/'/g,"\\'")}')">
+      <span class="sug-code">${v.vendor}</span>
+      <span class="sug-name">${v.name}</span>
+      <span class="sug-num">${v.count} EX</span>
+    </div>`).join('');
+  sugEl.classList.add('show');
+});
+
+function selectSug(vendorKey) {
+  const [vendor, name] = vendorKey.split('|');
+  searchInput.value = name;
+  sugEl.classList.remove('show');
+  renderVendorResults(vendorKey);
+}
+
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+  if (e.key === 'Escape') { sugEl.classList.remove('show'); }
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) sugEl.classList.remove('show');
+});
+
+// ===== Status overview buttons & modal =====
+function computeStatusLists() {
+  const lists = { accept: [], reject: [], hold: [], pending: [] };
+  DB.forEach(r => {
+    const merged = getMerged(r);
+    // check each round for entries; we report by latest meaningful round
+    for (let n = 3; n >= 1; n--) {
+      const s = merged['s'+n];
+      const d = merged['d'+n];
+      if (!s && !d) continue;
+      if (s) {
+        const entry = { exim: r.exim, vendor: r.vendor, name: r.name, round: n, date: merged['d'+n], note: merged['n'+n] };
+        if (isAccept(s)) lists.accept.push(entry);
+        else if (isHold(s)) lists.hold.push(entry);
+        else if (isReject(s)) lists.reject.push(entry);
+      }
+      break; // only consider the latest round that has data
+    }
+    const anyData = merged.s1 || merged.s2 || merged.s3 || merged.d1 || merged.d2 || merged.d3;
+    if (!anyData) lists.pending.push({ exim: r.exim, vendor: r.vendor, name: r.name, round: '-', date: '', note: '' });
+  });
+  return lists;
+}
+
+function renderStatusButtons() {
+  const lists = computeStatusLists();
+  const bar = document.getElementById('statusButtonsBar');
+  bar.innerHTML = `
+    <button class="status-btn accept" onclick="openStatusModal('accept')">
+      <span class="dot dot-accept"></span> รับกลับ / รับคืน <span class="count">${lists.accept.length}</span>
+    </button>
+    <button class="status-btn reject" onclick="openStatusModal('reject')">
+      <span class="dot dot-reject"></span> ไม่รับ <span class="count">${lists.reject.length}</span>
+    </button>
+    <button class="status-btn hold" onclick="openStatusModal('hold')">
+      <span class="dot dot-hold"></span> ไม่รับยึดบิล <span class="count">${lists.hold.length}</span>
+    </button>
+    <button class="status-btn" onclick="openStatusModal('pending')">
+      <span class="dot dot-pending"></span> รอดำเนินการ <span class="count">${lists.pending.length}</span>
+    </button>
+  `;
+  document.getElementById('totalBadge').textContent = DB.length + ' รายการ';
+}
+
+const statusTitles = {
+  accept: '✅ รายการรับกลับ / รับคืน',
+  reject: '❌ รายการไม่รับ',
+  hold: '⚠️ รายการไม่รับยึดบิล',
+  pending: '• รายการรอดำเนินการ'
+};
+
+function openStatusModal(key) {
+  const lists = computeStatusLists();
+  const items = lists[key];
+  document.getElementById('modalTitle').textContent = statusTitles[key] + ` (${items.length} รายการ)`;
+  const body = document.getElementById('modalBody');
+  if (!items.length) {
+    body.innerHTML = `<div class="modal-empty">ไม่มีรายการในสถานะนี้</div>`;
+  } else {
+    body.innerHTML = items.map(it => `
+      <div class="modal-row" onclick="jumpToVendor('${it.vendor}|${it.name.replace(/'/g,"\\'")}')">
+        <span class="modal-row-exim">${it.exim}</span>
+        <span class="modal-row-vendor">${it.name}</span>
+        ${it.round !== '-' ? `<span class="modal-row-round">ครั้งที่ ${it.round}</span>` : ''}
+        <span class="modal-row-date">${fmtDate(it.date)}</span>
+      </div>
+    `).join('');
+  }
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+function jumpToVendor(vendorKey) {
+  closeModal();
+  const [vendor, name] = vendorKey.split('|');
+  searchInput.value = name;
+  renderVendorResults(vendorKey);
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target.id === 'modalOverlay') closeModal();
+});
+
+// ===== Date search feature =====
+function doDateSearch() {
+  const dateVal = document.getElementById('dateSearchInput').value; // yyyy-mm-dd
+  document.getElementById('dateClearBtn').style.display = dateVal ? 'inline-block' : 'none';
+  if (!dateVal) { clearSearch(); return; }
+
+  // clear vendor text search to avoid confusion
+  searchInput.value = '';
+  sugEl.classList.remove('show');
+
+  // find all records where d1/d2/d3 matches the date, group by vendor
+  const map = new Map();
+  DB.forEach(r => {
+    const merged = getMerged(r);
+    for (let n = 1; n <= 3; n++) {
+      if (normalizeDate(merged['d'+n]) === dateVal) {
+        const key = r.vendor + '|' + r.name;
+        if (!map.has(key)) map.set(key, { vendor: r.vendor, name: r.name, exims: new Set() });
+        map.get(key).exims.add(r.exim);
+      }
+    }
+  });
+
+  const content = document.getElementById('mainContent');
+  const statBar = document.getElementById('statBar');
+  statBar.style.display = 'none';
+
+  const results = Array.from(map.values());
+  if (!results.length) {
+    content.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📅</div>
+      <div class="empty-text">ไม่พบ Vendor ที่มีวันที่เข้าส่ง ${fmtDate(dateVal)}</div>
+      <div class="empty-hint">ลองเลือกวันที่อื่น</div>
+    </div>`;
+    return;
+  }
+
+  content.innerHTML = `
+    <div style="margin-bottom:14px;color:var(--text-muted);font-size:13px;">
+      📅 พบ <b style="color:var(--text)">${results.length}</b> Vendor ที่มีวันที่เข้าส่งวันที่ <b style="color:var(--teal-dark)">${fmtDate(dateVal)}</b> — คลิก Vendor เพื่อดูรายละเอียดและแก้ไข
+    </div>
+    ${results.map(v => `
+      <div class="vendor-simple-row" onclick="openEditModal('${v.vendor}|${v.name.replace(/'/g,"\\'")}')">
+        <div class="vendor-simple-icon">🏢</div>
+        <div class="vendor-simple-info">
+          <div class="vendor-simple-code">Vendor Code: ${v.vendor}</div>
+          <div class="vendor-simple-name">${v.name}</div>
+        </div>
+        <div class="vendor-simple-exim">${v.exims.size} EX</div>
+        <div class="vendor-simple-arrow">→</div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function clearDateSearch() {
+  document.getElementById('dateSearchInput').value = '';
+  document.getElementById('dateClearBtn').style.display = 'none';
+  clearSearch();
+}
+
+// ===== Edit popup modal (from date search or anywhere) =====
+function openEditModal(vendorKey) {
+  currentModalMode = 'vendor';
+  const [vendor, name] = vendorKey.split('|');
+  const results = DB.filter(r => r.vendor === vendor && r.name === name);
+
+  document.getElementById('editModalCode').textContent = 'Vendor Code: ' + vendor;
+  document.getElementById('editModalName').textContent = name;
+
+  const body = document.getElementById('editModalBody');
+  body.innerHTML = results.map(r => renderCard(r, {inModal: true})).join('');
+
+  document.getElementById('editModalOverlay').classList.add('show');
+  // auto-open edit sections since user came here specifically to update
+  results.forEach(r => {
+    const eb = document.getElementById('edit_' + r.exim);
+    const ch = document.getElementById('chev_' + r.exim);
+    if (eb) eb.classList.add('open');
+    if (ch) ch.classList.add('open');
+  });
+}
+
+function openEximModal(exim) {
+  currentModalMode = 'exim';
+  const r = DB.find(x => x.exim === exim);
+  if (!r) return;
+
+  document.getElementById('editModalCode').textContent = 'Vendor Code: ' + r.vendor;
+  document.getElementById('editModalName').textContent = r.name;
+
+  const body = document.getElementById('editModalBody');
+  body.innerHTML = renderCard(r, {inModal: true});
+
+  document.getElementById('editModalOverlay').classList.add('show');
+  const eb = document.getElementById('edit_' + r.exim);
+  const ch = document.getElementById('chev_' + r.exim);
+  if (eb) eb.classList.add('open');
+  if (ch) ch.classList.add('open');
+}
+
+function closeEditModal() {
+  document.getElementById('editModalOverlay').classList.remove('show');
+}
+
+document.getElementById('editModalOverlay').addEventListener('click', e => {
+  if (e.target.id === 'editModalOverlay') closeEditModal();
+});
+
+// ===================================================================
+// โหลดข้อมูลจาก Google Sheets ผ่าน Apps Script Web App
+// ===================================================================
+async function loadData(showLoadingState) {
+  if (showLoadingState) {
+    document.getElementById('mainContent').innerHTML = `<div class="empty-state">
+      <div class="empty-icon">⏳</div>
+      <div class="empty-text">กำลังโหลดข้อมูลจาก Google Sheets...</div>
+    </div>`;
+  }
+  try {
+    const res = await fetch(API_URL + '?t=' + Date.now()); // กัน cache
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'โหลดข้อมูลไม่สำเร็จ');
+
+    DB = json.data;
+    lastDataTimestamp = json.timestamp || Date.now();
+    renderStatusButtons();
+
+    if (showLoadingState) {
+      document.getElementById('mainContent').innerHTML = `<div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <div class="empty-text">กรอกชื่อ Vendor หรือ Vendor Code เพื่อค้นหา</div>
+        <div class="empty-hint">ระบบจะแสดงรายการ EX ทั้งหมดของ Vendor นั้น</div>
+      </div>`;
+    }
+    return true;
+  } catch (err) {
+    if (showLoadingState) {
+      document.getElementById('mainContent').innerHTML = `<div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-text">เชื่อมต่อ Google Sheets ไม่สำเร็จ</div>
+        <div class="empty-hint">${err.message} — ตรวจสอบ API_URL ในไฟล์ HTML</div>
+      </div>`;
+    }
+    return false;
+  }
+}
+
+/**
+ * Poll ข้อมูลใหม่เป็นระยะ เพื่อเห็นการแก้ไขของผู้ใช้คนอื่นโดยไม่ต้อง refresh หน้าเอง
+ * - ถ้า popup เปิดอยู่ จะไม่แทรกแซง (รอให้ผู้ใช้บันทึก/ปิดก่อน)
+ * - ถ้ากำลังบันทึกอยู่ จะข้าม poll รอบนั้นไปก่อน
+ */
+async function pollForUpdates() {
+  const modalOpen = document.getElementById('editModalOverlay').classList.contains('show');
+  if (modalOpen || isSaving) return;
+
+  try {
+    const res = await fetch(API_URL + '?t=' + Date.now());
+    const json = await res.json();
+    if (!json.success) return;
+    if (json.timestamp && json.timestamp <= lastDataTimestamp) return; // ไม่มีอะไรใหม่
+
+    DB = json.data;
+    lastDataTimestamp = json.timestamp || Date.now();
+    renderStatusButtons();
+    refreshCurrentView();
+  } catch (err) {
+    // เงียบไว้ ไม่ต้องรบกวนผู้ใช้ถ้า poll พลาดแค่รอบเดียว
+  }
+}
+
+// init
+(async function init() {
+  renderStatusButtons();
+  await loadData(true);
+  setInterval(pollForUpdates, POLL_INTERVAL_MS);
+})();
+
+</script>
+</body>
+</html>
