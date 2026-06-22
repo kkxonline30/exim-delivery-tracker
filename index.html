@@ -523,18 +523,19 @@
   .modal-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
 
   /* Date search results - vendor simple list */
+  .date-vendor-block { margin-bottom: 10px; }
   .vendor-simple-row {
     display: flex; align-items: center; gap: 14px;
     padding: 14px 18px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
-    margin-bottom: 10px;
     cursor: pointer;
     box-shadow: var(--shadow);
     transition: all 0.15s;
   }
-  .vendor-simple-row:hover { box-shadow: var(--shadow-md); border-color: var(--teal); transform: translateY(-1px); }
+  .vendor-simple-row:hover { box-shadow: var(--shadow-md); border-color: var(--teal); }
+  .vendor-simple-row.open { border-radius: 12px 12px 0 0; border-color: var(--teal); background: var(--teal-tint); }
   .vendor-simple-icon {
     width: 40px; height: 40px;
     background: var(--teal-tint);
@@ -546,8 +547,20 @@
   .vendor-simple-info { flex: 1; min-width: 0; }
   .vendor-simple-code { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-muted); }
   .vendor-simple-name { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .vendor-simple-arrow { color: var(--teal); font-size: 18px; flex-shrink: 0; }
-  .vendor-simple-exim { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--teal-dark); background: var(--teal-tint); padding: 3px 9px; border-radius: 8px; white-space: nowrap; }
+  .vendor-simple-arrow { color: var(--teal); font-size: 16px; flex-shrink: 0; transition: transform 0.2s; }
+  .vendor-simple-stats { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
+  .vendor-simple-stats .mini-stat { font-size: 11px; padding: 4px 9px; }
+
+  .date-vendor-sublist {
+    display: none;
+    background: var(--bg);
+    border: 1px solid var(--teal);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    padding: 14px;
+  }
+  .date-vendor-sublist.open { display: block; }
+  .date-vendor-sublist .result-card:last-child { margin-bottom: 0; }
 
   /* Edit popup modal (larger) */
   .edit-modal-box {
@@ -863,7 +876,7 @@ function refreshCurrentView() {
   // รีเฟรชมุมมองปัจจุบันให้ตรงกับ DB ล่าสุด โดยไม่ต้องเปิด popup ใหม่
   const dateVal = document.getElementById('dateSearchInput').value;
   if (dateVal) {
-    doDateSearch();
+    renderDateSearchResults(dateVal); // ใช้ตัวนี้แทน doDateSearch() เพื่อไม่ล้างสถานะที่กางไว้
   } else if (lastVendorKey) {
     renderVendorResults(lastVendorKey);
   }
@@ -1166,6 +1179,8 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
 });
 
 // ===== Date search feature =====
+let dateSearchExpanded = {}; // เก็บสถานะว่า vendor ไหนถูกกางออกอยู่บ้าง (key = vendor|name)
+
 function doDateSearch() {
   const dateVal = document.getElementById('dateSearchInput').value; // yyyy-mm-dd
   document.getElementById('dateClearBtn').style.display = dateVal ? 'inline-block' : 'none';
@@ -1174,7 +1189,12 @@ function doDateSearch() {
   // clear vendor text search to avoid confusion
   searchInput.value = '';
   sugEl.classList.remove('show');
+  dateSearchExpanded = {}; // reset การกางออกทุกครั้งที่ค้นหาวันที่ใหม่
 
+  renderDateSearchResults(dateVal);
+}
+
+function renderDateSearchResults(dateVal) {
   // find all records where d1/d2/d3 matches the date, group by vendor
   const map = new Map();
   DB.forEach(r => {
@@ -1204,20 +1224,56 @@ function doDateSearch() {
 
   content.innerHTML = `
     <div style="margin-bottom:14px;color:var(--text-muted);font-size:13px;">
-      📅 พบ <b style="color:var(--text)">${results.length}</b> Vendor ที่มีวันที่เข้าส่งวันที่ <b style="color:var(--teal-dark)">${fmtDate(dateVal)}</b> — คลิก Vendor เพื่อดูรายละเอียดและแก้ไข
+      📅 พบ <b style="color:var(--text)">${results.length}</b> Vendor ที่มีวันที่เข้าส่งวันที่ <b style="color:var(--teal-dark)">${fmtDate(dateVal)}</b> — คลิก Vendor เพื่อดูรายการ EX และแก้ไขสถานะ
     </div>
-    ${results.map(v => `
-      <div class="vendor-simple-row" onclick="openEditModal('${v.vendor}|${v.name.replace(/'/g,"\\'")}')">
+    ${results.map(v => renderDateVendorRow(v, dateVal)).join('')}
+  `;
+}
+
+function renderDateVendorRow(v, dateVal) {
+  const key = v.vendor + '|' + v.name;
+  const exims = Array.from(v.exims);
+  const records = exims.map(ex => DB.find(r => r.exim === ex)).filter(Boolean);
+
+  // คำนวณสถานะสรุปของ vendor นี้ (เฉพาะ EX ที่มีวันที่ตรงกับที่ค้นหา)
+  let accept = 0, reject = 0, hold = 0, pending = 0;
+  records.forEach(r => {
+    const merged = getMerged(r);
+    const s = overallStatus(merged);
+    if (!s) pending++;
+    else if (isAccept(s)) accept++;
+    else if (isHold(s)) hold++;
+    else reject++;
+  });
+
+  const isOpen = !!dateSearchExpanded[key];
+
+  return `
+    <div class="date-vendor-block">
+      <div class="vendor-simple-row ${isOpen ? 'open' : ''}" onclick="toggleDateVendor('${key.replace(/'/g,"\\'")}', '${dateVal}')">
         <div class="vendor-simple-icon">🏢</div>
         <div class="vendor-simple-info">
           <div class="vendor-simple-code">Vendor Code: ${v.vendor}</div>
           <div class="vendor-simple-name">${v.name}</div>
         </div>
-        <div class="vendor-simple-exim">${v.exims.size} EX</div>
-        <div class="vendor-simple-arrow">→</div>
+        <div class="vendor-simple-stats">
+          <span class="mini-stat total">📦 ${records.length} EX</span>
+          ${accept ? `<span class="mini-stat accept">✅ ${accept}</span>` : ''}
+          ${reject ? `<span class="mini-stat reject">❌ ${reject}</span>` : ''}
+          ${hold ? `<span class="mini-stat hold">⚠️ ${hold}</span>` : ''}
+          ${pending ? `<span class="mini-stat pending">• ${pending}</span>` : ''}
+        </div>
+        <div class="vendor-simple-arrow chevron ${isOpen ? 'open' : ''}">▾</div>
       </div>
-    `).join('')}
-  `;
+      <div class="date-vendor-sublist ${isOpen ? 'open' : ''}" id="dateSub_${key.replace(/[^a-zA-Z0-9ก-๙]/g,'_')}">
+        ${isOpen ? records.map(r => renderCard(r)).join('') : ''}
+      </div>
+    </div>`;
+}
+
+function toggleDateVendor(key, dateVal) {
+  dateSearchExpanded[key] = !dateSearchExpanded[key];
+  renderDateSearchResults(dateVal);
 }
 
 function clearDateSearch() {
